@@ -1,0 +1,807 @@
+﻿@page "/register"
+@using e_declare.Data
+@using e_declare.Models
+@using Microsoft.EntityFrameworkCore
+@using System.Security.Cryptography
+@using System.Text
+@using System.Text.RegularExpressions
+@inject AppDbContext Db
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@rendermode InteractiveServer
+
+<PageTitle>Registro — e-Declare</PageTitle>
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+    :root {
+        --purple-deep: #2c1a4d;
+        --purple-dark: #412870;
+        --purple-mid: #5b399c;
+        --purple-accent: #784ccf;
+        --purple-bright: #9e75ff;
+        --purple-glow: #d0bfff;
+        --gold: #d4b981;
+        --gold-light: #f0dcae;
+        --white: #ffffff;
+        --white-dim: rgba(255,255,255,0.9);
+        --white-faint: rgba(255,255,255,0.2);
+        --border: rgba(255,255,255,0.3);
+        --border-focus: rgba(255,255,255,0.8);
+        --error: #ff5e5e;
+        --success: #5ce0d5;
+    }
+
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    ::-webkit-scrollbar {
+        width: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.1);
+        border-radius: 5px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: var(--purple-glow);
+        border-radius: 5px;
+    }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--purple-bright);
+        }
+
+    .reg-root {
+        height: 100vh;
+        background: var(--purple-deep);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'DM Sans', sans-serif;
+        overflow: hidden;
+        position: relative;
+        padding: 20px 16px;
+    }
+
+    .bg-canvas {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 0;
+        overflow: hidden;
+    }
+
+    .doc-float {
+        position: absolute;
+        width: 60px;
+        height: 76px;
+        border: 1.5px solid rgba(255,255,255,0.2);
+        border-radius: 4px;
+        background: rgba(255,255,255,0.1);
+        animation: floatDoc linear infinite;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: rgba(255,255,255,0.2);
+    }
+
+        .doc-float::before {
+            content: '';
+            position: absolute;
+            top: 12px;
+            left: 10px;
+            right: 10px;
+            height: 2px;
+            background: rgba(255,255,255,0.3);
+            box-shadow: 0 6px 0 rgba(255,255,255,0.25), 0 12px 0 rgba(255,255,255,0.2), 0 18px 0 rgba(255,255,255,0.15);
+        }
+
+        .doc-float::after {
+            content: '\f00c';
+            font-family: 'FontAwesome';
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            font-size: 10px;
+            color: rgba(255,255,255,0.4);
+        }
+
+        .doc-float:nth-child(1) {
+            left: 5%;
+            animation-duration: 18s;
+            animation-delay: 0s;
+            width: 50px;
+            height: 64px;
+        }
+
+        .doc-float:nth-child(2) {
+            left: 15%;
+            animation-duration: 24s;
+            animation-delay: -6s;
+        }
+
+        .doc-float:nth-child(3) {
+            left: 28%;
+            animation-duration: 20s;
+            animation-delay: -12s;
+            width: 44px;
+            height: 56px;
+        }
+
+        .doc-float:nth-child(4) {
+            left: 45%;
+            animation-duration: 22s;
+            animation-delay: -4s;
+        }
+
+        .doc-float:nth-child(5) {
+            left: 60%;
+            animation-duration: 17s;
+            animation-delay: -9s;
+            width: 52px;
+            height: 66px;
+        }
+
+        .doc-float:nth-child(6) {
+            left: 72%;
+            animation-duration: 25s;
+            animation-delay: -2s;
+        }
+
+        .doc-float:nth-child(7) {
+            left: 85%;
+            animation-duration: 19s;
+            animation-delay: -15s;
+            width: 46px;
+            height: 58px;
+        }
+
+        .doc-float:nth-child(8) {
+            left: 92%;
+            animation-duration: 23s;
+            animation-delay: -8s;
+        }
+
+    @@keyframes floatDoc {
+        0% {
+            transform: translateY(110vh) rotate(-8deg);
+            opacity: 0;
+        }
+
+        5% {
+            opacity: 1;
+        }
+
+        95% {
+            opacity: 1;
+        }
+
+        100% {
+            transform: translateY(-15vh) rotate(8deg);
+            opacity: 0;
+        }
+    }
+
+    .bg-glow {
+        position: fixed;
+        width: 700px;
+        height: 700px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        animation: pulseGlow 6s ease-in-out infinite;
+    }
+
+    @@keyframes pulseGlow {
+        0%, 100% {
+            scale: 1;
+            opacity: 0.8;
+        }
+
+        50% {
+            scale: 1.1;
+            opacity: 1;
+        }
+    }
+
+    .bg-stamp {
+        position: fixed;
+        width: 260px;
+        height: 260px;
+        border: 3px solid rgba(255,255,255,0.06);
+        border-radius: 50%;
+        top: 50%;
+        right: 8%;
+        transform: translateY(-50%) rotate(-15deg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Playfair Display', serif;
+        font-size: 11px;
+        letter-spacing: 6px;
+        color: rgba(255,255,255,0.08);
+        text-transform: uppercase;
+        animation: rotateSlow 40s linear infinite;
+    }
+
+    @@keyframes rotateSlow {
+        to {
+            transform: translateY(-50%) rotate(345deg);
+        }
+    }
+
+    .reg-card {
+        position: relative;
+        z-index: 10;
+        width: 100%;
+        max-width: 760px;
+        max-height: 94vh;
+        display: flex;
+        flex-direction: column;
+        background: linear-gradient(145deg, rgba(65,40,112,0.95) 0%, rgba(44,26,77,0.98) 100%);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        overflow: hidden;
+    }
+
+        .reg-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--gold), var(--purple-bright), var(--gold), transparent);
+        }
+
+    .reg-header {
+        padding: 25px 40px 20px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        flex-shrink: 0;
+    }
+
+    .reg-logo {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, var(--white-faint), rgba(255,255,255,0.4));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        color: var(--white);
+    }
+
+    .reg-title-block h1 {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.5rem;
+        color: var(--white);
+    }
+
+    .reg-title-block p {
+        font-size: 0.85rem;
+        color: var(--white-dim);
+    }
+
+    .reg-body {
+        padding: 25px 40px 35px;
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    .section-title {
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        color: var(--white);
+        margin-bottom: 20px;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 5px;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px 20px;
+        margin-bottom: 25px;
+    }
+
+    .span-2 {
+        grid-column: span 2;
+    }
+
+    .form-field {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+        .form-field label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--white-dim);
+        }
+
+            .form-field label .req {
+                color: var(--gold);
+            }
+
+        .form-field input, .form-field select {
+            background: rgba(0,0,0,0.15);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 12px;
+            color: var(--white);
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+            .form-field input::placeholder {
+                color: rgba(255,255,255,0.4);
+            }
+
+            .form-field select option {
+                background: var(--purple-dark);
+                color: white;
+            }
+
+            .form-field input:focus, .form-field select:focus {
+                border-color: var(--white);
+                background: rgba(0,0,0,0.25);
+            }
+
+            .form-field input.error, .form-field select.error {
+                border-color: var(--error);
+                background: rgba(255,94,94,0.1);
+            }
+
+    .pwd-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+        .pwd-wrapper input {
+            width: 100%;
+            padding-right: 40px;
+        }
+
+    .pwd-toggle {
+        position: absolute;
+        right: 12px;
+        color: rgba(255,255,255,0.5);
+        cursor: pointer;
+        font-size: 1rem;
+        transition: color 0.2s;
+    }
+
+        .pwd-toggle:hover {
+            color: var(--white);
+        }
+
+    .field-error {
+        font-size: 0.75rem;
+        color: #ffadad;
+        margin-top: 2px;
+        font-weight: bold;
+    }
+
+    .pw-strength {
+        display: flex;
+        gap: 4px;
+        margin-top: 6px;
+    }
+
+    .pw-bar {
+        flex: 1;
+        height: 3px;
+        border-radius: 2px;
+        background: var(--error);
+        transition: background 0.3s;
+    }
+
+        .pw-bar.active {
+            background: var(--success);
+        }
+
+    .pw-labels {
+        display: flex;
+        gap: 4px;
+        font-size: 0.65rem;
+        color: rgba(255,255,255,0.5);
+        margin-top: 3px;
+        text-align: center;
+    }
+
+        .pw-labels span {
+            flex: 1;
+            transition: color 0.3s;
+        }
+
+            .pw-labels span.active {
+                color: var(--success);
+                font-weight: bold;
+            }
+
+    .avatar-grid {
+        display: flex;
+        gap: 15px;
+        margin-top: 5px;
+        margin-bottom: 20px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .avatar-item {
+        width: 65px;
+        height: 65px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid transparent;
+        cursor: pointer;
+        transition: 0.2s;
+        background: rgba(255,255,255,0.2);
+    }
+
+        .avatar-item:hover {
+            transform: scale(1.05);
+        }
+
+        .avatar-item.selected {
+            border-color: var(--gold);
+            box-shadow: 0 0 15px rgba(212,185,129,0.8);
+            transform: scale(1.1);
+        }
+
+    .btn-submit {
+        width: 100%;
+        padding: 14px;
+        border: none;
+        border-radius: 10px;
+        background: var(--white);
+        color: var(--purple-deep);
+        font-weight: bold;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: 0.2s;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            background: var(--gold-light);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+    .reg-footer {
+        text-align: center;
+        margin-top: 20px;
+        font-size: 0.85rem;
+        color: var(--white-dim);
+    }
+
+        .reg-footer a {
+            color: var(--gold);
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+            .reg-footer a:hover {
+                text-decoration: underline;
+            }
+</style>
+
+<div class="reg-root">
+    <div class="bg-canvas">
+        @for (int i = 0; i < 8; i++)
+        {
+            <div class="doc-float"></div>
+        }
+        <div class="bg-glow"></div>
+        <div class="bg-stamp">e-declare · declaración electrónica</div>
+    </div>
+
+    <div class="reg-card">
+        <div class="reg-header">
+            <div class="reg-logo">
+                <i class="fa-solid fa-user-shield"></i>
+            </div>
+            <div class="reg-title-block">
+                <h1>Registro de Usuario</h1>
+                <p>Crea tu cuenta en e-Declare</p>
+            </div>
+        </div>
+
+        <div class="reg-body">
+
+            <div class="section-title">Datos Personales</div>
+
+            <div class="form-field span-2">
+                <label style="text-align:center;">Selecciona tu Avatar <span class="req">*</span></label>
+                <div class="avatar-grid">
+                    @foreach (var img in listaAvatares)
+                    {
+                        <img src="/images/Avatars/@img"
+                             class="avatar-item @(usuario.AvatarUrl == img ? "selected" : "")"
+                             @onclick="() => usuario.AvatarUrl = img" />
+                    }
+                </div>
+                @if (errores.ContainsKey("Avatar"))
+                {
+                    <div class="field-error" style="text-align:center; margin-bottom:15px;">
+                        <i class="fa-solid fa-circle-exclamation"></i> @errores["Avatar"]
+                    </div>
+                }
+            </div>
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label>Nombres <span class="req">*</span></label>
+                    <input type="text" @bind="usuario.Nombres" placeholder="Ej: Juan Carlos" class="@(errores.ContainsKey("Nombres") ? "error" : "")" />
+                    @if (errores.ContainsKey("Nombres"))
+                    {
+                        <span class="field-error"><i class="fa-solid fa-circle-exclamation"></i> @errores["Nombres"]</span>
+                    }
+                </div>
+                <div class="form-field">
+                    <label>Apellidos <span class="req">*</span></label>
+                    <input type="text" @bind="usuario.Apellidos" placeholder="Ej: Pérez López" class="@(errores.ContainsKey("Apellidos") ? "error" : "")" />
+                    @if (errores.ContainsKey("Apellidos"))
+                    {
+                        <span class="field-error"><i class="fa-solid fa-circle-exclamation"></i> @errores["Apellidos"]</span>
+                    }
+                </div>
+
+                <div class="form-field">
+                    <label>Fecha Nacimiento <span class="req">*</span></label>
+                    <input type="date" @bind="usuario.FechaNacimiento" class="@(errores.ContainsKey("FechaNacimiento") ? "error" : "")" />
+                    @if (errores.ContainsKey("FechaNacimiento"))
+                    {
+                        <span class="field-error"><i class="fa-solid fa-circle-exclamation"></i> @errores["FechaNacimiento"]</span>
+                    }
+                </div>
+                <div class="form-field">
+                    <label>Celular <span class="req">*</span></label>
+                    <input type="tel" @bind="usuario.Celular" placeholder="0991234567" class="@(errores.ContainsKey("Celular") ? "error" : "")" />
+                    @if (errores.ContainsKey("Celular"))
+                    {
+                        <span class="field-error"><i class="fa-solid fa-circle-exclamation"></i> @errores["Celular"]</span>
+                    }
+                </div>
+            </div>
+
+            <div class="section-title" style="margin-top: 15px;">Credenciales de Acceso</div>
+
+            <div class="form-grid">
+                <div class="form-field span-2">
+                    <label>Correo Electrónico<span class="req">*</span></label>
+                    <input type="email" @bind="usuario.Email" placeholder="correo@empresa.com" class="@(errores.ContainsKey("Email") ? "error" : "")" />
+                    @if (errores.ContainsKey("Email"))
+                    {
+                        <span class="field-error"><i class="fa-solid fa-circle-exclamation"></i> @errores["Email"]</span>
+                    }
+                </div>
+
+                <div class="form-field">
+                    <label>Contraseña <span class="req">*</span></label>
+                    <div class="pwd-wrapper">
+                        <input type="@(mostrarPassword ? "text" : "password")" value="@password" @oninput="EvaluarPassword" placeholder="Tu contraseña segura" class="@(errores.ContainsKey("Password") ? "error" : "")" />
+                        <i class="fa-solid @(mostrarPassword ? "fa-eye-slash" : "fa-eye") pwd-toggle" @onclick="() => mostrarPassword = !mostrarPassword"></i>
+                    </div>
+
+                    <div class="pw-strength">
+                        <div class="pw-bar @(hasUpper ? "active" : "")"></div>
+                        <div class="pw-bar @(hasLower ? "active" : "")"></div>
+                        <div class="pw-bar @(hasNumber ? "active" : "")"></div>
+                        <div class="pw-bar @(hasSpecial ? "active" : "")"></div>
+                        <div class="pw-bar @(hasLength ? "active" : "")"></div>
+                    </div>
+                    <div class="pw-labels">
+                        <span class="@(hasUpper ? "active" : "")">Mayús</span>
+                        <span class="@(hasLower ? "active" : "")">Minús</span>
+                        <span class="@(hasNumber ? "active" : "")">Num</span>
+                        <span class="@(hasSpecial ? "active" : "")">Esp</span>
+                        <span class="@(hasLength ? "active" : "")">8-16</span>
+                    </div>
+
+                    @if (errores.ContainsKey("Password"))
+                    {
+                        <span class="field-error"><i class="fa-solid fa-circle-exclamation"></i> @errores["Password"]</span>
+                    }
+                </div>
+
+                <div class="form-field">
+                    <label>Confirmar Contraseña <span class="req">*</span></label>
+                    <div class="pwd-wrapper">
+                        <input type="@(mostrarConfirmPassword ? "text" : "password")" @bind="confirmPassword" placeholder="Repite la contraseña" class="@(errores.ContainsKey("Confirm") ? "error" : "")" />
+                        <i class="fa-solid @(mostrarConfirmPassword ? "fa-eye-slash" : "fa-eye") pwd-toggle" @onclick="() => mostrarConfirmPassword = !mostrarConfirmPassword"></i>
+                    </div>
+
+                    @if (errores.ContainsKey("Confirm"))
+                    {
+                        <span class="field-error"><i class="fa-solid fa-circle-exclamation"></i> @errores["Confirm"]</span>
+                    }
+                </div>
+            </div>
+
+            <div style="margin-top:30px;">
+                <button class="btn-submit" @onclick="Registrar" disabled="@cargando">
+                    @if (cargando)
+                    {
+                        <span><i class="fa-solid fa-spinner fa-spin"></i> Registrando...</span>
+                    }
+                    else
+                    {
+                        <span><i class="fa-solid fa-check"></i> Finalizar Registro</span>
+                    }
+                </button>
+            </div>
+
+            <div class="reg-footer">
+                ¿Ya tienes cuenta? <a href="/login">Iniciar sesión</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private Usuario usuario = new()
+    {
+        FechaCreacion = DateTime.Now,
+        Estado = true,
+        IntentosFallidos = 0,
+        CuentaBloqueada = false,
+        SaldoDocumentos = 0,
+        MFA_Habilitado = false,
+        IdTipoUsuario = 1 // ASIGNADO POR DEFECTO
+    };
+
+    private string[] listaAvatares = { "Avatar-Boy.jpg", "Avatar-Squid.jpg", "avatar1.jpg", "avatar2.jpg", "avatar3.png", "avatar4.png" };
+
+    private string password = "";
+    private string confirmPassword = "";
+    private bool mostrarPassword = false;
+    private bool mostrarConfirmPassword = false;
+    private bool cargando = false;
+    private Dictionary<string, string> errores = [];
+
+    // Variables de validación de contraseña
+    private bool hasUpper = false;
+    private bool hasLower = false;
+    private bool hasNumber = false;
+    private bool hasSpecial = false;
+    private bool hasLength = false;
+
+    private bool ValidarDosPalabras(string texto)
+    {
+        if (string.IsNullOrWhiteSpace(texto)) return false;
+        var palabras = texto.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return palabras.Length >= 2;
+    }
+
+    private void EvaluarPassword(ChangeEventArgs e)
+    {
+        var pw = e.Value?.ToString() ?? "";
+        password = pw;
+
+        hasUpper = pw.Any(char.IsUpper);
+        hasLower = pw.Any(char.IsLower);
+        hasNumber = pw.Any(char.IsDigit);
+        hasSpecial = pw.Any(c => "!@#$%^&*()_+-=[]{}|;':,./<>?".Contains(c));
+        hasLength = pw.Length >= 8 && pw.Length <= 16;
+    }
+
+    private async Task Registrar()
+    {
+        errores.Clear();
+
+        // 1. Validaciones Síncronas (Campos vacíos o mal escritos)
+        if (string.IsNullOrEmpty(usuario.AvatarUrl)) errores["Avatar"] = "Debes seleccionar un avatar.";
+        if (!ValidarDosPalabras(usuario.Nombres)) errores["Nombres"] = "Ingresa al menos dos nombres.";
+        if (!ValidarDosPalabras(usuario.Apellidos)) errores["Apellidos"] = "Ingresa al menos dos apellidos.";
+        if (string.IsNullOrWhiteSpace(usuario.Celular)) errores["Celular"] = "Campo requerido.";
+
+        if (usuario.FechaNacimiento == null) errores["FechaNacimiento"] = "Campo requerido.";
+        else
+        {
+            var edad = DateTime.Today.Year - usuario.FechaNacimiento.Value.Year;
+            if (usuario.FechaNacimiento.Value.Date > DateTime.Today.AddYears(-edad)) edad--;
+            if (edad < 18) errores["FechaNacimiento"] = "Debes ser mayor de 18 años.";
+        }
+
+        if (string.IsNullOrWhiteSpace(usuario.Email)) errores["Email"] = "Campo requerido.";
+        else if (!usuario.Email.Contains('@')) errores["Email"] = "Formato de correo inválido.";
+
+        var passRegex = new Regex(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,16}$");
+        if (string.IsNullOrWhiteSpace(password)) errores["Password"] = "Campo requerido.";
+        else if (!passRegex.IsMatch(password)) errores["Password"] = "No cumple con los requisitos verdes.";
+        if (password != confirmPassword) errores["Confirm"] = "Las contraseñas no coinciden.";
+
+        // Si hay campos vacíos, lanzamos la primera alerta
+        if (errores.Count > 0)
+        {
+            try { await JS.InvokeVoidAsync("Swal.fire", "Faltan datos", "Por favor, completa correctamente todos los campos resaltados en rojo.", "warning"); } catch { }
+            return;
+        }
+
+        cargando = true;
+
+        // 2. Validaciones Asíncronas (Duplicados en Base de Datos)
+        try
+        {
+
+            // Validar Correo Único
+            bool emailExiste = await Db.Usuarios.AnyAsync(u => u.Email == usuario.Email);
+            if (emailExiste)
+            {
+                errores["Email"] = "Datos ya Registrados.";
+                await JS.InvokeVoidAsync("Swal.fire", "Dato Duplicado", "Estos datos ya se encuentran registrado.", "error");
+                cargando = false;
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("Swal.fire", "Error de conexión", "No se pudo validar con la base de datos: " + ex.Message, "error");
+            cargando = false;
+            return;
+        }
+
+        // 3. Proceso de Guardado
+        try
+        {
+            using var sha = SHA256.Create();
+            var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(password));
+            usuario.PasswordHash = Convert.ToHexString(hash).ToLower();
+
+            Db.Usuarios.Add(usuario);
+            await Db.SaveChangesAsync();
+
+            // Alerta de éxito
+            try
+            {
+                await JS.InvokeVoidAsync("Swal.fire", new
+                {
+                    title = "¡Registro Exitoso!",
+                    text = "Tu cuenta ha sido creada correctamente.",
+                    icon = "success",
+                    confirmButtonColor = "#5b399c"
+                });
+            }
+            catch { }
+
+            Nav.NavigateTo("/login");
+        }
+        catch (Exception ex)
+        {
+            try { await JS.InvokeVoidAsync("Swal.fire", "Error al guardar", "Ocurrió un error en la base de datos: " + ex.Message, "error"); } catch { }
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+}

@@ -1,0 +1,51 @@
+﻿@page "/usuarios"
+@using e_declare.Data
+@using e_declare.Models
+@using Microsoft.EntityFrameworkCore
+@inject AppDbContext Db
+@rendermode InteractiveServer
+
+<h3>Usuarios del sistema</h3>
+
+@if (usuarios == null)
+{
+    <p>Cargando...</p>
+}
+else if (!usuarios.Any())
+{
+    <p>No hay usuarios registrados.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombres</th>
+                <th>Apellidos</th>
+                <th>Email</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var u in usuarios)
+            {
+                <tr>
+                    <td>@u.IdUsuario</td>
+                    <td>@u.Nombres</td>
+                    <td>@u.Apellidos</td>
+                    <td>@u.Email</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Usuario>? usuarios;
+
+    protected override async Task OnInitializedAsync()
+    {
+        usuarios = await Db.Usuarios.ToListAsync();
+    }
+}
